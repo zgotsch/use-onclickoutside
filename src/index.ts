@@ -26,7 +26,9 @@ const getOptions = (event: HandledEventsType) => {
 }
 
 export default function useOnClickOutside(
-  ref: React.RefObject<HTMLElement>,
+  ref:
+    | React.RefObject<HTMLElement>
+    | ReadonlyArray<React.RefObject<HTMLElement>>,
   handler: Handler | null,
 ) {
   if (!isBrowser) {
@@ -41,10 +43,18 @@ export default function useOnClickOutside(
     }
 
     const listener = (event: PossibleEvent) => {
+      let refArray = null
+      if (Array.isArray(ref)) {
+        refArray = ref
+      } else {
+        refArray = [ref]
+      }
+
       if (
-        !ref.current ||
         !handlerRef.current ||
-        ref.current.contains(event.target as Node)
+        refArray
+          .filter(r => r.current != null)
+          .some(r => r.current.contains(event.target as Node))
       ) {
         return
       }
@@ -58,9 +68,11 @@ export default function useOnClickOutside(
 
     return () => {
       events.forEach(event => {
-        document.removeEventListener(event, listener, getOptions(
+        document.removeEventListener(
           event,
-        ) as EventListenerOptions)
+          listener,
+          getOptions(event) as EventListenerOptions,
+        )
       })
     }
   }, [!handler])
